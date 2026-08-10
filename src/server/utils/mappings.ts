@@ -18,7 +18,8 @@ export const TABLE_ALIASES: Record<string, string[]> = {
   "clasisficacion_palletsv2": ["clasisficacion_pallets", "clasificacion_pallets", "clasificacion_palletsv2", "clasisficacion_pallet"],
   "clasificacion_palletsv2": ["clasisficacion_pallets", "clasificacion_pallets", "clasisficacion_palletsv2"],
   "estado_callesv2": ["estado_calles", "estados_calles", "estado_calle"],
-  "inventario_fisicov2": ["inventario_fisico", "inventarios_fisicos"]
+  "inventario_fisicov2": ["inventario_fisico", "inventarios_fisicos"],
+  "parametros_balanzav2": ["parametros_balanza", "parametro_balanza", "parametro_balanzav2", "parametros_balanzas", "controles_balanzasv2"]
 };
 
 export function getIdColumnAndKey(tableName: string): { sheetCol: string; clientKey: string } {

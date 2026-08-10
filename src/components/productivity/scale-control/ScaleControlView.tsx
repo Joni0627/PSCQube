@@ -27,6 +27,23 @@ export default function ScaleControlView({ masters, currentUser, onSave, onDelet
     const perm = currentUser?.permissions?.find(p => p.viewId === 'SCALE');
     return perm ? perm.level === 'EDIT' : false;
   }, [currentUser]);
+
+  // Active tolerances from scale parameters master
+  const activeParams = useMemo(() => {
+    const param = masters.scaleParameters?.[0];
+    const parseParam = (val: any, def: number) => {
+      if (val === undefined || val === null || val === '') return def;
+      const num = Number(val);
+      return isNaN(num) ? def : num;
+    };
+
+    return {
+      positiveBiasTolerance: Math.abs(parseParam(param?.positiveBiasTolerance ?? (param as any)?.tolerancia_positiva_bias, 0.02)),
+      negativeBiasTolerance: -Math.abs(parseParam(param?.negativeBiasTolerance ?? (param as any)?.tolerancia_negativa_bias, -0.02)),
+      positiveRangeTolerance: Math.abs(parseParam(param?.positiveRangeTolerance ?? (param as any)?.tolerancia_positiva_rango, 0.01)),
+      negativeRangeTolerance: -Math.abs(parseParam(param?.negativeRangeTolerance ?? (param as any)?.tolerancia_negativa_rango, -0.01))
+    };
+  }, [masters.scaleParameters]);
   
   // Range for audits
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -271,16 +288,32 @@ export default function ScaleControlView({ masters, currentUser, onSave, onDelet
     { header: 'Media', accessor: (row) => <span className="font-bold">{row.average.toFixed(2)}</span> },
     { 
       header: 'Bias', 
-      accessor: (row) => (
-        <span className={cn(
-          "font-mono font-bold",
-          Math.abs(row.bias) > 0.5 ? "text-red-500" : "text-green-500"
-        )}>
-          {row.bias.toFixed(2)}
-        </span>
-      )
+      accessor: (row) => {
+        const isBiasError = row.bias > activeParams.positiveBiasTolerance || row.bias < activeParams.negativeBiasTolerance;
+        return (
+          <span className={cn(
+            "font-mono font-bold",
+            isBiasError ? "text-red-500" : "text-green-500"
+          )}>
+            {row.bias.toFixed(2)}
+          </span>
+        );
+      }
     },
-    { header: 'Rango', accessor: (row) => row.range.toFixed(2) },
+    { 
+      header: 'Rango', 
+      accessor: (row) => {
+        const isRangeError = row.range > activeParams.positiveRangeTolerance || row.range < activeParams.negativeRangeTolerance;
+        return (
+          <span className={cn(
+            "font-mono font-bold",
+            isRangeError ? "text-red-500" : "text-green-500"
+          )}>
+            {row.range.toFixed(2)}
+          </span>
+        );
+      }
+    },
     { 
       header: 'Acciones', 
       align: 'right',
@@ -472,14 +505,26 @@ export default function ScaleControlView({ masters, currentUser, onSave, onDelet
                     
                     <div className="bg-bg/60 p-4 rounded-xl border border-border flex flex-col justify-center">
                       <span className="text-[10px] uppercase font-bold text-text-muted mb-1">Bias (Error)</span>
-                      <span className={cn("text-xl font-mono font-bold", Math.abs(computed.bias) > 0.5 ? "text-red-400" : "text-green-400")}>
-                        {computed.bias.toFixed(2)}
-                      </span>
+                      {(() => {
+                        const isBiasError = computed.bias > activeParams.positiveBiasTolerance || computed.bias < activeParams.negativeBiasTolerance;
+                        return (
+                          <span className={cn("text-xl font-mono font-bold", isBiasError ? "text-red-400" : "text-green-400")}>
+                            {computed.bias.toFixed(2)}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <div className="bg-bg/60 p-4 rounded-xl border border-border flex flex-col justify-center">
                       <span className="text-[10px] uppercase font-bold text-text-muted mb-1">Rango (Dispersión)</span>
-                      <span className="text-xl font-mono font-bold text-text-main">{computed.range.toFixed(2)}</span>
+                      {(() => {
+                        const isRangeError = computed.range > activeParams.positiveRangeTolerance || computed.range < activeParams.negativeRangeTolerance;
+                        return (
+                          <span className={cn("text-xl font-mono font-bold", isRangeError ? "text-red-400" : "text-green-400")}>
+                            {computed.range.toFixed(2)}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
 

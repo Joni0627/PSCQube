@@ -122,35 +122,40 @@ export const durationMinutesFromHHMMSS = (timeStr: any): number => {
 
 export function areRecordsEqual(recordA: any, recordB: any, schemaHeaders: string[], schema: any): boolean {
   if (!recordA || !recordB) return false;
-  for (const header of schemaHeaders) {
-    const key = schema ? schema.sheetToClient[header] || header : header;
-    const valA = recordA[key];
-    const valB = recordB[key];
-    
-    const normalize = (v: any) => {
-      if (v === undefined || v === null) return "";
-      if (typeof v === "boolean") return v ? "true" : "false";
-      if (typeof v === "string") {
-        const lower = v.trim().toLowerCase();
-        if (lower === "true" || lower === "si" || lower === "sí" || lower === "yes") return "true";
-        if (lower === "false" || lower === "no") return "false";
-        if (lower.startsWith("[") || lower.startsWith("{")) {
-          try {
-            return JSON.stringify(JSON.parse(v.trim()));
-          } catch {
-            return v.trim();
-          }
+
+  const normalize = (v: any) => {
+    if (v === undefined || v === null) return "";
+    if (typeof v === "boolean") return v ? "true" : "false";
+    if (typeof v === "string") {
+      const lower = v.trim().toLowerCase();
+      if (lower === "true" || lower === "si" || lower === "sí" || lower === "yes") return "true";
+      if (lower === "false" || lower === "no") return "false";
+      if (lower.startsWith("[") || lower.startsWith("{")) {
+        try {
+          return JSON.stringify(JSON.parse(v.trim()));
+        } catch {
+          return v.trim();
         }
-        return v.trim();
       }
-      if (typeof v === "number") {
-        return String(v);
-      }
-      if (typeof v === "object") {
-        try { return JSON.stringify(v); } catch { return ""; }
-      }
-      return String(v).trim();
-    };
+      return v.trim();
+    }
+    if (typeof v === "number") {
+      return String(v);
+    }
+    if (typeof v === "object") {
+      try { return JSON.stringify(v); } catch { return ""; }
+    }
+    return String(v).trim();
+  };
+
+  const headers = schemaHeaders && schemaHeaders.length > 0
+    ? schemaHeaders
+    : Array.from(new Set([...Object.keys(recordA), ...Object.keys(recordB)]));
+
+  for (const header of headers) {
+    const key = schema && schema.sheetToClient ? schema.sheetToClient[header] || header : header;
+    const valA = recordA[key] !== undefined ? recordA[key] : recordA[header];
+    const valB = recordB[key] !== undefined ? recordB[key] : recordB[header];
     
     if (normalize(valA) !== normalize(valB)) {
       return false;

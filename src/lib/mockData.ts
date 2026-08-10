@@ -26,6 +26,7 @@ export const SYSTEM_VIEWS: { id: string; label: string; section: 'PRODUCTIVITY' 
   { id: 'PUNTOS_CARGA', label: 'Puntos de Carga', section: 'ADMIN' },
   { id: 'PROVEEDORES_BOLSA', label: 'Proveedores Bolsa', section: 'ADMIN' },
   { id: 'VEHICULOS', label: 'Vehículos', section: 'ADMIN' },
+  { id: 'CONTROLES_BALANZAS', label: 'Controles Balanzas', section: 'ADMIN' },
 ];
 
 export const USERS: AppUser[] = [

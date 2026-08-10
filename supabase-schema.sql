@@ -241,7 +241,17 @@ CREATE TABLE IF NOT EXISTS control_balanzav2 (
     observaciones TEXT
 );
 
--- 17b. Tabla: clasisficacion_palletsv2
+-- 17b. Tabla: parametros_balanzav2
+CREATE TABLE IF NOT EXISTS parametros_balanzav2 (
+    id TEXT PRIMARY KEY,
+    tolerancia_positiva_bias NUMERIC DEFAULT 0.02,
+    tolerancia_negativa_bias NUMERIC DEFAULT -0.02,
+    tolerancia_positiva_rango NUMERIC DEFAULT 0.01,
+    tolerancia_negativa_rango NUMERIC DEFAULT 0.01,
+    historial_modificacion JSONB DEFAULT '[]'::jsonb
+);
+
+-- 17c. Tabla: clasisficacion_palletsv2
 CREATE TABLE IF NOT EXISTS clasisficacion_palletsv2 (
     id TEXT PRIMARY KEY,
     fecha TEXT,

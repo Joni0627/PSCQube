@@ -422,6 +422,8 @@ export default function App() {
         setVehicles(data);
       } else if (upper === "CARGA_COMBUSTIBLEV2" || upper === "CARGA_COMBUSTIBLE") {
         setFuelLoads(data);
+      } else if (upper === "PARAMETROS_BALANZAV2" || upper === "PARAMETROS_BALANZA" || upper === "CONTROLES_BALANZAS") {
+        setScaleParameters(data);
       }
     };
 
@@ -464,6 +466,7 @@ export default function App() {
   const [bagSuppliers, setBagSuppliers] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [fuelLoads, setFuelLoads] = useState<any[]>([]);
+  const [scaleParameters, setScaleParameters] = useState<any[]>([]);
 
   const masters: MasterData = {
     palletizers,
@@ -477,7 +480,8 @@ export default function App() {
     companies,
     loadingPoints,
     bagSuppliers,
-    vehicles
+    vehicles,
+    scaleParameters
   };
 
   // Secure full fallback admin user context if Sheets is completely empty
@@ -783,7 +787,7 @@ export default function App() {
       const [
         resStops, resProduction, resDater, resScale, resStock,
         resPalletClassifications, resChange, resDespachos,
-        resLoadingLanes, resFuelLoads, resUsers
+        resLoadingLanes, resFuelLoads, resUsers, resScaleParams
       ] = await Promise.all([
         fetchTable("PAROSV2", false, initialFilters, "App.handleSyncOnEnter"),
         fetchTable("PRODUCCIONV2", false, initialFilters, "App.handleSyncOnEnter"),
@@ -795,7 +799,8 @@ export default function App() {
         fetchTable("DESPACHOSV2", false, initialFilters, "App.handleSyncOnEnter"),
         fetchTable("ESTADO_CALLESV2", false, initialFilters, "App.handleSyncOnEnter"),
         fetchTable("CARGA_COMBUSTIBLEV2", false, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("USUARIOSV2", true, {}, "App.handleSyncOnEnter")
+        fetchTable("USUARIOSV2", true, {}, "App.handleSyncOnEnter"),
+        fetchTable("PARAMETROS_BALANZAV2", false, {}, "App.handleSyncOnEnter")
       ]);
 
       setSyncMessage('Preparando sistema...');
@@ -817,6 +822,12 @@ export default function App() {
         if (d.puntoscarga) setLoadingPoints(d.puntoscarga);
         if (d.proveedoresbolsa) setBagSuppliers(d.proveedoresbolsa);
         if (d.vehiculos) setVehicles(d.vehiculos);
+        if (d.parametrosbalanza || d.parametros_balanza) setScaleParameters(d.parametrosbalanza || d.parametros_balanza);
+        
+        // If direct fetch returned params, ensure they take effect
+        if (resScaleParams && resScaleParams.success && Array.isArray(resScaleParams.data) && resScaleParams.data.length > 0) {
+          setScaleParameters(resScaleParams.data);
+        }
         
         // Get absolute latest users list (bypassing any server-side cache)
         const rawUsers = (resUsers && resUsers.success && Array.isArray(resUsers.data))
@@ -2168,6 +2179,7 @@ export default function App() {
                       if (type === 'PUNTOS_CARGA') setLoadingPoints(data);
                       if (type === 'BAG_SUPPLIERS' || type === 'PROVEEDORES_BOLSA') setBagSuppliers(data);
                       if (type === 'VEHICULOS' || type === 'VEHICULES') setVehicles(data);
+                      if (type === 'CONTROLES_BALANZAS' || type === 'PARAMETROS_BALANZA') setScaleParameters(data);
 
                       // Sincronización automática en tiempo real con Google Sheets
                       const cleanType = String(type).toUpperCase().trim();
@@ -2186,7 +2198,9 @@ export default function App() {
                         BAG_SUPPLIERS: "PROVEEDORES_BOLSAV2",
                         PROVEEDORES_BOLSA: "PROVEEDORES_BOLSAV2",
                         VEHICULOS: "VEHICULOSV2",
-                        VEHICLES: "VEHICULOSV2"
+                        VEHICLES: "VEHICULOSV2",
+                        CONTROLES_BALANZAS: "PARAMETROS_BALANZAV2",
+                        PARAMETROS_BALANZA: "PARAMETROS_BALANZAV2"
                       };
                       const suffix = tabSuffixMapping[cleanType];
                       

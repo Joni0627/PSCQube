@@ -28,18 +28,31 @@ const calculateShiftDuration = (start: string, end: string): number => {
   return Math.round((diffMins / 60) * 100) / 100;
 };
 
-export function MasterFormModal({ type, item, onClose, onSave, masters }: any) {
+export function MasterFormModal({ type, item, onClose, onSave, masters, currentUser }: any) {
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<any>(
-    item || {
+  const [formData, setFormData] = useState<any>(() => {
+    if (item) return item;
+    if (type === "CONTROLES_BALANZAS" || type === "PARAMETROS_BALANZA") {
+      return {
+        positiveBiasTolerance: 0.02,
+        negativeBiasTolerance: -0.02,
+        positiveRangeTolerance: 0.01,
+        negativeRangeTolerance: -0.01,
+        tolerancia_positiva_bias: 0.02,
+        tolerancia_negativa_bias: -0.02,
+        tolerancia_positiva_rango: 0.01,
+        tolerancia_negativa_rango: -0.01
+      };
+    }
+    return {
       permissions: SYSTEM_VIEWS.map((v) => ({
         viewId: v.id,
         label: v.label,
         section: v.section,
         level: "NONE",
       })),
-    },
-  );
+    };
+  });
 
   const handleMaterialToggle = (materialId: string) => {
     const currentList = formData.materialIds || [];
@@ -73,6 +86,8 @@ export function MasterFormModal({ type, item, onClose, onSave, masters }: any) {
     LOADING_POINTS: { name: "Punto de Carga", female: false },
     PROVEEDORES_BOLSA: { name: "Proveedor de Bolsa", female: false },
     VEHICULOS: { name: "Vehículo", female: false },
+    CONTROLES_BALANZAS: { name: "Parámetro de Balanza", female: false },
+    PARAMETROS_BALANZA: { name: "Parámetro de Balanza", female: false },
   };
 
   const config = typeNames[type] || { name: type, female: false };
@@ -88,10 +103,70 @@ export function MasterFormModal({ type, item, onClose, onSave, masters }: any) {
     // Auto-generate ID if missing for all types
     if (!finalData.id && !finalData.ID && type !== "USERS") {
       const prefix =
-        type === "CAPACITIES" ? "CAP" : type.substring(0, 3).toUpperCase();
+        type === "CAPACITIES" ? "CAP" : 
+        type === "CONTROLES_BALANZAS" || type === "PARAMETROS_BALANZA" ? "PARAM-BAL" :
+        type.substring(0, 3).toUpperCase();
       finalData.id =
         `${prefix}-` + Math.random().toString(36).substr(2, 4).toUpperCase();
       if (type === "BAGGERS") finalData.type = "ENSACADORA";
+    }
+
+    if (type === "CONTROLES_BALANZAS" || type === "PARAMETROS_BALANZA") {
+      const parseNum = (val: any, def: number) => {
+        if (typeof val === 'number') return isNaN(val) ? def : val;
+        if (typeof val === 'string') {
+          const parsed = parseFloat(val.replace(',', '.').trim());
+          return isNaN(parsed) ? def : parsed;
+        }
+        return def;
+      };
+
+      const ensurePositive = (num: number) => Math.abs(num);
+      const ensureNegative = (num: number) => -Math.abs(num);
+
+      finalData.positiveBiasTolerance = ensurePositive(parseNum(finalData.positiveBiasTolerance ?? finalData.tolerancia_positiva_bias, 0.02));
+      finalData.negativeBiasTolerance = ensureNegative(parseNum(finalData.negativeBiasTolerance ?? finalData.tolerancia_negativa_bias, -0.02));
+      finalData.positiveRangeTolerance = ensurePositive(parseNum(finalData.positiveRangeTolerance ?? finalData.tolerancia_positiva_rango, 0.01));
+      finalData.negativeRangeTolerance = ensureNegative(parseNum(finalData.negativeRangeTolerance ?? finalData.tolerancia_negativa_rango, -0.01));
+
+      finalData.tolerancia_positiva_bias = finalData.positiveBiasTolerance;
+      finalData.tolerancia_negativa_bias = finalData.negativeBiasTolerance;
+      finalData.tolerancia_positiva_rango = finalData.positiveRangeTolerance;
+      finalData.tolerancia_negativa_rango = finalData.negativeRangeTolerance;
+
+      // Register modification audit log
+      let prevHistory: any[] = [];
+      const rawHist = item?.modificationHistory ?? item?.historial_modificacion ?? formData.modificationHistory ?? formData.historial_modificacion;
+      if (Array.isArray(rawHist)) {
+        prevHistory = rawHist;
+      } else if (typeof rawHist === 'string' && rawHist.trim() !== '' && rawHist.trim() !== '{}') {
+        try {
+          const parsed = JSON.parse(rawHist);
+          if (Array.isArray(parsed)) prevHistory = parsed;
+        } catch {}
+      }
+
+      const activeUser = currentUser || masters?.currentUser || {};
+      const newAuditLog = {
+        fecha: new Date().toISOString(),
+        usuario_dni: activeUser.dni || 'ADMIN',
+        usuario_nombre: activeUser.name || 'Administrador',
+        valores_anteriores: {
+          tolerancia_positiva_bias: item?.positiveBiasTolerance ?? item?.tolerancia_positiva_bias ?? 0.02,
+          tolerancia_negativa_bias: item?.negativeBiasTolerance ?? item?.tolerancia_negativa_bias ?? -0.02,
+          tolerancia_positiva_rango: item?.positiveRangeTolerance ?? item?.tolerancia_positiva_rango ?? 0.01,
+          tolerancia_negativa_rango: item?.negativeRangeTolerance ?? item?.tolerancia_negativa_rango ?? -0.01
+        },
+        valores_nuevos: {
+          tolerancia_positiva_bias: finalData.positiveBiasTolerance,
+          tolerancia_negativa_bias: finalData.negativeBiasTolerance,
+          tolerancia_positiva_rango: finalData.positiveRangeTolerance,
+          tolerancia_negativa_rango: finalData.negativeRangeTolerance
+        }
+      };
+
+      finalData.modificationHistory = [...prevHistory, newAuditLog];
+      finalData.historial_modificacion = finalData.modificationHistory;
     }
 
     // For users, we use DNI as ID if needed but essentially DNI is the key
@@ -1130,6 +1205,71 @@ export function MasterFormModal({ type, item, onClose, onSave, masters }: any) {
                       onChange={(e: any) =>
                         setFormData({ ...formData, carga_maxima: e.target.value })
                       }
+                    />
+                  </div>
+                </>
+              )}
+
+              {(type === "CONTROLES_BALANZAS" || type === "PARAMETROS_BALANZA") && (
+                <>
+                  <div className="md:col-span-1">
+                    <GlassInput
+                      type="text"
+                      inputMode="decimal"
+                      label="Tolerancia Positiva BIAS"
+                      value={formData.positiveBiasTolerance ?? formData.tolerancia_positiva_bias ?? 0.02}
+                      onChange={(e: any) => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                          setFormData({ ...formData, positiveBiasTolerance: val, tolerancia_positiva_bias: val });
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <GlassInput
+                      type="text"
+                      inputMode="decimal"
+                      label="Tolerancia Negativa BIAS"
+                      value={formData.negativeBiasTolerance ?? formData.tolerancia_negativa_bias ?? -0.02}
+                      onChange={(e: any) => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || val === '-' || /^-?\d*\.?\d*$/.test(val)) {
+                          setFormData({ ...formData, negativeBiasTolerance: val, tolerancia_negativa_bias: val });
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <GlassInput
+                      type="text"
+                      inputMode="decimal"
+                      label="Tolerancia Positiva Rango"
+                      value={formData.positiveRangeTolerance ?? formData.tolerancia_positiva_rango ?? 0.01}
+                      onChange={(e: any) => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                          setFormData({ ...formData, positiveRangeTolerance: val, tolerancia_positiva_rango: val });
+                        }
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <GlassInput
+                      type="text"
+                      inputMode="decimal"
+                      label="Tolerancia Negativa Rango"
+                      value={formData.negativeRangeTolerance ?? formData.tolerancia_negativa_rango ?? -0.01}
+                      onChange={(e: any) => {
+                        const val = e.target.value.replace(',', '.');
+                        if (val === '' || val === '-' || /^-?\d*\.?\d*$/.test(val)) {
+                          setFormData({ ...formData, negativeRangeTolerance: val, tolerancia_negativa_rango: val });
+                        }
+                      }}
+                      required
                     />
                   </div>
                 </>

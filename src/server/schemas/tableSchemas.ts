@@ -561,6 +561,32 @@ export const TABLE_SCHEMAS: Record<string, TableSchema> = {
       observaciones: "observations"
     }
   },
+  PARAMETROS_BALANZAV2: {
+    sheetHeaders: [
+      "id",
+      "tolerancia_positiva_bias",
+      "tolerancia_negativa_bias",
+      "tolerancia_positiva_rango",
+      "tolerancia_negativa_rango",
+      "historial_modificacion"
+    ],
+    clientToSheet: {
+      id: "id",
+      positiveBiasTolerance: "tolerancia_positiva_bias",
+      negativeBiasTolerance: "tolerancia_negativa_bias",
+      positiveRangeTolerance: "tolerancia_positiva_rango",
+      negativeRangeTolerance: "tolerancia_negativa_rango",
+      modificationHistory: "historial_modificacion"
+    },
+    sheetToClient: {
+      id: "id",
+      tolerancia_positiva_bias: "positiveBiasTolerance",
+      tolerancia_negativa_bias: "negativeBiasTolerance",
+      tolerancia_positiva_rango: "positiveRangeTolerance",
+      tolerancia_negativa_rango: "negativeRangeTolerance",
+      historial_modificacion: "modificationHistory"
+    }
+  },
   CLASISFICACION_PALLETSV2: {
     sheetHeaders: [
       "id",

@@ -354,6 +354,15 @@ export interface AlertNotification {
   relatedId?: string; // productChange ID
 }
 
+export interface ScaleParameter {
+  id: string;
+  positiveBiasTolerance: number;
+  negativeBiasTolerance: number;
+  positiveRangeTolerance: number;
+  negativeRangeTolerance: number;
+  modificationHistory?: any[] | string;
+}
+
 export interface MasterData {
   palletizers: Machine[];
   baggers: Machine[];
@@ -367,4 +376,5 @@ export interface MasterData {
   loadingPoints: LoadingPoint[];
   bagSuppliers: BagSupplier[];
   vehicles: Vehicle[];
+  scaleParameters?: ScaleParameter[];
 }

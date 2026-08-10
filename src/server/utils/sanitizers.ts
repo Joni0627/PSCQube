@@ -107,6 +107,12 @@ export function getProcessedValue(colName: string, originalKey: string, val: any
   if (cleanCol === 'fecha' || cleanCol === 'date' || cleanOrig === 'fecha' || cleanOrig === 'date') {
     return normalizeDateToISO(val);
   }
+  if (cleanCol === 'historial_modificacion' || cleanOrig === 'historial_modificacion' || cleanOrig === 'modificationhistory' || cleanOrig === 'modification_history') {
+    if (typeof val === 'string' && val.trim() !== '') {
+      try { return JSON.parse(val); } catch { return val; }
+    }
+    return val;
+  }
   const sanitized = sanitizeValue(val);
   return typeof sanitized === "object" ? JSON.stringify(sanitized) : sanitized;
 }

@@ -18,7 +18,8 @@ router.get("/api/sync/maestros", async (req, res) => {
       empresas,
       puntoscarga,
       proveedoresbolsa,
-      vehiculos
+      vehiculos,
+      parametrosbalanza
     ] = await Promise.all([
       readFromSupabase("TURNOSV2").then(r => r || []).catch(() => []),
       readFromSupabase("PALETIZADORAV2").then(r => r || []).catch(() => []),
@@ -31,7 +32,8 @@ router.get("/api/sync/maestros", async (req, res) => {
       readFromSupabase("EMPRESASV2").then(r => r || []).catch(() => []),
       readFromSupabase("PUNTOS_CARGAV2").then(r => r || []).catch(() => []),
       readFromSupabase("PROVEEDORES_BOLSAV2").then(r => r || []).catch(() => []),
-      readFromSupabase("VEHICULOSV2").then(r => r || []).catch(() => [])
+      readFromSupabase("VEHICULOSV2").then(r => r || []).catch(() => []),
+      readFromSupabase("PARAMETROS_BALANZAV2").then(r => r || []).catch(() => [])
     ]);
 
     return res.json({
@@ -48,7 +50,8 @@ router.get("/api/sync/maestros", async (req, res) => {
         empresas,
         puntoscarga,
         proveedoresbolsa,
-        vehiculos
+        vehiculos,
+        parametrosbalanza
       }
     });
   } catch (error: any) {

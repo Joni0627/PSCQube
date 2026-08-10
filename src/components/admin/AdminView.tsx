@@ -72,6 +72,8 @@ export default function AdminView({
     PUNTOS_CARGA: "PUNTOS_CARGA",
     PROVEEDORES_BOLSA: "PROVEEDORES_BOLSA",
     VEHICULOS: "VEHICULOS",
+    CONTROLES_BALANZAS: "CONTROLES_BALANZAS",
+    PARAMETROS_BALANZA: "CONTROLES_BALANZAS",
   };
 
   const isVisible = (tab: string) => {
@@ -99,6 +101,7 @@ export default function AdminView({
       { key: "SHIFTS", label: "Turnos" },
       { key: "USERS", label: "Usuarios" },
       { key: "VEHICULOS", label: "Vehículos" },
+      { key: "CONTROLES_BALANZAS", label: "Controles Balanzas" },
     ].sort((a, b) => a.label.localeCompare(b.label, "es", { sensitivity: "base" }));
   }, []);
 
@@ -160,6 +163,7 @@ export default function AdminView({
       return masters.loadingPoints;
     if (activeTab === "PROVEEDORES_BOLSA") return masters.bagSuppliers || [];
     if (activeTab === "VEHICULOS") return masters.vehicles || [];
+    if (activeTab === "CONTROLES_BALANZAS" || activeTab === "PARAMETROS_BALANZA") return masters.scaleParameters || [];
     return [];
   };
 
@@ -792,6 +796,42 @@ export default function AdminView({
     actionsColumn(),
   ];
 
+  const scaleParameterColumns: Column<any>[] = [
+    {
+      header: "Tolerancia Positiva BIAS",
+      accessor: (row) => (
+        <span className="font-mono font-bold text-emerald-500">
+          +{Number(Math.abs(row.positiveBiasTolerance ?? row.tolerancia_positiva_bias ?? 0.02)).toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      header: "Tolerancia Negativa BIAS",
+      accessor: (row) => (
+        <span className="font-mono font-bold text-red-500">
+          -{Number(Math.abs(row.negativeBiasTolerance ?? row.tolerancia_negativa_bias ?? 0.02)).toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      header: "Tolerancia Positiva Rango",
+      accessor: (row) => (
+        <span className="font-mono font-bold text-emerald-500">
+          +{Number(Math.abs(row.positiveRangeTolerance ?? row.tolerancia_positiva_rango ?? 0.01)).toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      header: "Tolerancia Negativa Rango",
+      accessor: (row) => (
+        <span className="font-mono font-bold text-red-500">
+          -{Number(Math.abs(row.negativeRangeTolerance ?? row.tolerancia_negativa_rango ?? 0.01)).toFixed(2)}
+        </span>
+      ),
+    },
+    actionsColumn(),
+  ];
+
   const userColumns: Column<AppUser>[] = [
     { header: "DNI / Legajo", accessor: "dni" },
     {
@@ -1279,6 +1319,15 @@ export default function AdminView({
                 keyExtractor={(r) => r.id}
               />
             )}
+            {(activeTab === "CONTROLES_BALANZAS" || activeTab === "PARAMETROS_BALANZA") && (
+              <DataTable
+                title="Parámetros y Tolerancias de Balanzas"
+                countLabel="parámetros"
+                columns={scaleParameterColumns}
+                data={filteredData}
+                keyExtractor={(r) => r.id}
+              />
+            )}
           </div>
         </div>
 
@@ -1300,6 +1349,7 @@ export default function AdminView({
           }}
           onSave={handleSave}
           masters={masters}
+          currentUser={currentUser}
         />
       )}
     </motion.div>
