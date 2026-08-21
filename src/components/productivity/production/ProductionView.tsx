@@ -1041,9 +1041,6 @@ export default function ProductionView({ masters, currentUser, onSave, onDelete,
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      COMPLETO
-                    </span>
                     <span className="text-xs font-extrabold text-text-main">
                       {selectedDate}
                     </span>
@@ -1129,7 +1126,19 @@ export default function ProductionView({ masters, currentUser, onSave, onDelete,
                       {history.map((row) => {
                         const baggerName = masters.baggers.find(b => b.id === row.baggerId)?.name || 'Ensacadora';
                         const details = row.materialsDetails || [];
-                        const primaryMat = details[0] ? masters.materials.find(m => m.id === details[0].materialId)?.name : null;
+                        const aggregatedMaterials = details.reduce((acc, curr) => {
+                          if (!acc[curr.materialId]) {
+                            acc[curr.materialId] = {
+                              name: masters.materials.find(m => m.id === curr.materialId)?.name || 'Desconocido',
+                              tons: 0,
+                              bags: 0
+                            };
+                          }
+                          acc[curr.materialId].tons += curr.tonsProduced || 0;
+                          acc[curr.materialId].bags += curr.bagsProduced || 0;
+                          return acc;
+                        }, {} as Record<string, { name: string, tons: number, bags: number }>);
+                        const materialsToDisplay = Object.values(aggregatedMaterials);
                         const nozzleAvail = parseFloat(row.nozzleAvailability || '100');
 
                         return (
@@ -1148,28 +1157,44 @@ export default function ProductionView({ masters, currentUser, onSave, onDelete,
                                     <span className="text-xs font-black text-text-main uppercase tracking-tight">
                                       {baggerName}
                                     </span>
-                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                      PRODUCIENDO
-                                    </span>
                                   </div>
-                                  {primaryMat && (
-                                    <span className="inline-block px-2 py-0.5 text-[9px] font-black tracking-wider uppercase rounded-md bg-slate-800 text-white border border-slate-700">
-                                      {primaryMat}
-                                    </span>
+                                  {materialsToDisplay.length > 0 && (
+                                    <div className="flex flex-col gap-1.5 mt-1.5">
+                                      {materialsToDisplay.map((mat, idx) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                          <span className="inline-block px-2 py-0.5 text-[9px] font-black tracking-wider uppercase rounded-md bg-slate-800 text-white border border-slate-700 shrink-0">
+                                            {mat.name}
+                                          </span>
+                                          <span className="text-[10px] font-bold text-text-main truncate">
+                                            {mat.bags.toLocaleString()} BOLSAS
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
                                   )}
                                 </div>
                               </div>
 
                               {/* Col 2: Producción */}
-                              <div className="md:col-span-2 space-y-0.5">
-                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block">PRODUCCIÓN</span>
-                                <div className="flex items-baseline gap-1">
-                                  <span className="text-sm font-black text-text-main tabular-nums">{row.tonsProduced.toFixed(1)}</span>
-                                  <span className="text-[9px] font-black text-primary dark:text-sky-400 uppercase">TN</span>
-                                </div>
-                                <span className="text-[9px] font-extrabold text-text-muted tabular-nums block">
-                                  {row.bagsProduced.toLocaleString()} BOLSAS
-                                </span>
+                              <div className="md:col-span-2 space-y-1">
+                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest block" style={{ height: '20px' }}>PRODUCCIÓN</span>
+                                {materialsToDisplay.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5 mt-1.5">
+                                    {materialsToDisplay.map((mat, idx) => (
+                                      <div key={idx} className="flex items-baseline gap-1" style={{ height: '20px' }}>
+                                        <span className="text-sm font-black text-text-main tabular-nums">{mat.tons.toFixed(1)}</span>
+                                        <span className="text-[9px] font-black text-primary dark:text-sky-400 uppercase">TN</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-1.5 mt-1.5">
+                                    <div className="flex items-baseline gap-1" style={{ height: '20px' }}>
+                                      <span className="text-sm font-black text-text-main tabular-nums">{row.tonsProduced.toFixed(1)}</span>
+                                      <span className="text-[9px] font-black text-primary dark:text-sky-400 uppercase">TN</span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Col 3: Maquinista */}
