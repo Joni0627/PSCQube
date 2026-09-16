@@ -756,8 +756,8 @@ export default function ProductionView({ masters, currentUser, onSave, onDelete,
       nozzleNews: formData.nozzleNews,
       nozzleAvailability: nozzleAvailabilityStr,
       hsMarchaTis: formData.hsMarchaTis ? parseFloat(formData.hsMarchaTis) : null,
-      machinistId: formData.machinistId || currentUser?.dni || "",
-      machinistName: formData.machinistId ? (masters.users.find((u: any) => u.dni === formData.machinistId)?.name || currentUser?.name || "") : (currentUser?.name || ""),
+      machinistId: formData.machinistId || "",
+      machinistName: formData.machinistId ? (masters.users.find((u: any) => String(u.dni) === String(formData.machinistId))?.name || "") : "",
       materialsDetails: activeDetailsList
     };
 
@@ -1325,10 +1325,13 @@ export default function ProductionView({ masters, currentUser, onSave, onDelete,
                 />
                 <GlassSelect
                   label="Maquinista"
-                  options={masters.users
-                    .filter(u => String(u.position || '').toLowerCase() === 'operario maquinista' || String(u.position || '').toLowerCase() === 'operario tecnico' || String(u.position || '').toLowerCase() === 'operario técnico')
-                    .map(u => ({ label: u.name, value: u.dni }))}
-                  value={formData.machinistId || (currentUser?.position?.toLowerCase().includes('maquinista') ? currentUser.dni : '')}
+                  options={[
+                    { label: "Seleccione un maquinista...", value: "" },
+                    ...masters.users
+                      .filter(u => String(u.position || '').toLowerCase() === 'operario maquinista' || String(u.position || '').toLowerCase() === 'operario tecnico' || String(u.position || '').toLowerCase() === 'operario técnico')
+                      .map(u => ({ label: u.name, value: String(u.dni) }))
+                  ]}
+                  value={formData.machinistId || ''}
                   onChange={e => setFormData(prev => ({ ...prev, machinistId: (e.target as HTMLSelectElement).value }))}
                 />
                 <GlassInput 
