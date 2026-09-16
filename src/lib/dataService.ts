@@ -84,6 +84,8 @@ export async function clearClientCache(tableName?: string): Promise<void> {
   }
 }
 
+const ongoingRequests = new Map<string, Promise<FetchResult>>();
+
 export async function fetchTable(
   tableName: string,
   forceBypass = false,
@@ -93,47 +95,63 @@ export async function fetchTable(
   let sheetName = tableName.toUpperCase();
   if (!sheetName.endsWith('V2')) sheetName = `${sheetName}V2`;
 
-  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-    const cached = await getBrowserCache(sheetName, filters);
-    if (cached) return { success: true, data: cached };
-    return { success: false, error: "Query skipped: Tab is backgrounded and cache is absent" };
+  let requestKey = sheetName + (forceBypass ? "_bypass" : "");
+  if (filters) {
+    requestKey += JSON.stringify(filters);
   }
 
-  if (!forceBypass) {
-    const cached = await getBrowserCache(sheetName, filters);
-    if (cached) return { success: true, data: cached };
+  if (ongoingRequests.has(requestKey)) {
+    return ongoingRequests.get(requestKey)!;
   }
 
-  try {
-    let queryParams = "";
-    if (forceBypass) queryParams += "bypassCache=true&";
-    if (filters) {
-      if (filters.date) queryParams += `date=${encodeURIComponent(filters.date)}&`;
-      if (filters.shiftId) queryParams += `shiftId=${encodeURIComponent(filters.shiftId)}&`;
-      if (filters.palletizerId) queryParams += `palletizerId=${encodeURIComponent(filters.palletizerId)}&`;
-      if (filters.dateFrom) queryParams += `dateFrom=${encodeURIComponent(filters.dateFrom)}&`;
-      if (filters.dateTo) queryParams += `dateTo=${encodeURIComponent(filters.dateTo)}&`;
-    }
-    queryParams += `source=${encodeURIComponent(source)}`;
+  const fetchPromise = (async () => {
+    try {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        const cached = await getBrowserCache(sheetName, filters);
+        if (cached) return { success: true, data: cached };
+        return { success: false, error: "Query skipped: Tab is backgrounded and cache is absent" };
+      }
 
-    let url = `/api/sheets?table=${sheetName}&${queryParams}`;
-    if (sheetName === "PRODUCCIONV2") url = `/api/produccion?${queryParams}`;
-    else if (sheetName === "PAROSV2") url = `/api/paros?${queryParams}`;
+      if (!forceBypass) {
+        const cached = await getBrowserCache(sheetName, filters);
+        if (cached) return { success: true, data: cached };
+      }
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorResponse = await response.json().catch(() => ({}));
-      return { success: false, error: errorResponse.error || `Error HTTP ${response.status}` };
+      let queryParams = "";
+      if (forceBypass) queryParams += "bypassCache=true&";
+      if (filters) {
+        if (filters.date) queryParams += `date=${encodeURIComponent(filters.date)}&`;
+        if (filters.shiftId) queryParams += `shiftId=${encodeURIComponent(filters.shiftId)}&`;
+        if (filters.palletizerId) queryParams += `palletizerId=${encodeURIComponent(filters.palletizerId)}&`;
+        if (filters.dateFrom) queryParams += `dateFrom=${encodeURIComponent(filters.dateFrom)}&`;
+        if (filters.dateTo) queryParams += `dateTo=${encodeURIComponent(filters.dateTo)}&`;
+      }
+      queryParams += `source=${encodeURIComponent(source)}`;
+
+      let url = `/api/sheets?table=${sheetName}&${queryParams}`;
+      if (sheetName === "PRODUCCIONV2") url = `/api/produccion?${queryParams}`;
+      else if (sheetName === "PAROSV2") url = `/api/paros?${queryParams}`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorResponse = await response.json().catch(() => ({}));
+        return { success: false, error: errorResponse.error || `Error HTTP ${response.status}` };
+      }
+      const result = await response.json();
+      if (result.success && Array.isArray(result.data)) {
+        await setBrowserCache(sheetName, result.data, filters);
+        return { success: true, data: result.data };
+      }
+      return { success: false, error: result.error || "Formato de respuesta inválido" };
+    } catch (error: any) {
+      return { success: false, error: error.message || String(error) };
+    } finally {
+      ongoingRequests.delete(requestKey);
     }
-    const result = await response.json();
-    if (result.success && Array.isArray(result.data)) {
-      await setBrowserCache(sheetName, result.data, filters);
-      return { success: true, data: result.data };
-    }
-    return { success: false, error: result.error || "Formato de respuesta inválido" };
-  } catch (error: any) {
-    return { success: false, error: error.message || String(error) };
-  }
+  })();
+
+  ongoingRequests.set(requestKey, fetchPromise);
+  return fetchPromise;
 }
 
 export async function createRecord(tableName: string, item: any): Promise<SyncResult> {

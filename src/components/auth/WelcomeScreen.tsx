@@ -207,10 +207,11 @@ export default function WelcomeScreen({ onEnter, onLoginSuccess, addToast }: Wel
       }
 
       // Supabase Native SignIn with Google OAuth redirected flow
+      const cleanRedirectUrl = window.location.origin + window.location.pathname;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.href,
+          redirectTo: cleanRedirectUrl,
           queryParams: {
             prompt: 'select_account'
           }
