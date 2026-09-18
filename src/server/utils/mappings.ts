@@ -208,12 +208,19 @@ export function mapItemForSupabase(tableName: string, item: any): Record<string,
       const mName = item.machinistName || item.descripcion_maquinista || item.maquinista_nombre || item.userName || item.usuario_nombre;
       if (mId !== undefined && mId !== null) {
         strictMapped["id_maquinista"] = mId;
-        strictMapped["maquinista_id"] = mId;
       }
       if (mName !== undefined && mName !== null) {
         strictMapped["descripcion_maquinista"] = mName;
-        strictMapped["maquinista_nombre"] = mName;
       }
+      
+      // Cleanup columns that do not exist in the Supabase schema to prevent Self-Heal delays (PGRST204)
+      delete strictMapped["maquinista_id"];
+      delete strictMapped["maquinista_nombre"];
+    }
+
+    if (upperTable === "DETALLES_PRODUCCIONV2") {
+      // Cleanup columns that do not exist in the Supabase schema to prevent Self-Heal delays (PGRST204)
+      delete strictMapped["boquillas_turno"];
     }
 
     if (upperTable === "PUNTOS_CARGAV2") {

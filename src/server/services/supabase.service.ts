@@ -95,7 +95,7 @@ export async function readFromSupabase(tableName: string, options?: ReadOptions)
       if (targetError) {
         const errStr = (targetError.message || "").toLowerCase();
         const errCode = targetError.code || "";
-        const isTableMissing = errCode === "42P01" || errStr.includes("does not exist") || errStr.includes("no existe") || errStr.includes("not found") || errStr.includes("invalid path");
+        const isTableMissing = errCode === "42P01" || errCode === "PGRST205" || errStr.includes("does not exist") || errStr.includes("no existe") || errStr.includes("not found") || errStr.includes("could not find the table") || errStr.includes("invalid path");
         
         if (isTableMissing) {
           console.log(`[Supabase Read] Table '${targetTable}' does not exist in database yet (expected fallback).`);
@@ -378,7 +378,7 @@ export async function deleteFromSupabase(tableName: string, idKey: string, idVal
 
       if (error) {
         const errStr = (error.message || "").toLowerCase();
-        const isTableMissing = error.code === "42P01" || errStr.includes("does not exist") || errStr.includes("no existe") || errStr.includes("not found");
+        const isTableMissing = error.code === "42P01" || error.code === "PGRST205" || errStr.includes("does not exist") || errStr.includes("no existe") || errStr.includes("not found") || errStr.includes("could not find the table");
 
         if (isTableMissing) {
           console.log(`[Supabase Delete Warning] Table '${targetTable}' does not exist. Trying next fallback...`);
