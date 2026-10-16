@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { TABLE_ALIASES, getIdColumnAndKey, mapItemForSupabase, mapSupabaseRowToClient } from "../utils/mappings.js";
+import { TABLE_ALIASES, CANONICAL_SUPABASE_TABLES, getIdColumnAndKey, mapItemForSupabase, mapSupabaseRowToClient } from "../utils/mappings.js";
 import { sanitizeColumnName } from "../utils/sanitizers.js";
 import { formatSupabaseError, extractColumnFromError } from "../utils/helpers.js";
 import { invalidateCache } from "../cache/cache.service.js";
@@ -45,16 +45,35 @@ export interface ReadOptions {
   date?: string;
   dateFrom?: string;
   dateTo?: string;
+  productionIds?: string[];
 }
 
 export async function readFromSupabase(tableName: string, options?: ReadOptions): Promise<any[] | null> {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
+  if (options?.productionIds && options.productionIds.length === 0) {
+    return [];
+  }
+
   const table = tableName.toLowerCase();
-  const tablesToTry = [table, ...(TABLE_ALIASES[table] || [])];
-  if (table.endsWith("v2") && !tablesToTry.includes(table.slice(0, -2))) {
-    tablesToTry.push(table.slice(0, -2));
+  const canonical = CANONICAL_SUPABASE_TABLES[table];
+  const tablesToTry: string[] = [];
+  if (canonical) {
+    tablesToTry.push(canonical);
+    const aliases = TABLE_ALIASES[canonical] || [];
+    for (const a of aliases) {
+      if (!tablesToTry.includes(a)) tablesToTry.push(a);
+    }
+  } else {
+    tablesToTry.push(table);
+    const aliases = TABLE_ALIASES[table] || [];
+    for (const a of aliases) {
+      if (!tablesToTry.includes(a)) tablesToTry.push(a);
+    }
+    if (table.endsWith("v2") && !tablesToTry.includes(table.slice(0, -2))) {
+      tablesToTry.push(table.slice(0, -2));
+    }
   }
 
   for (const targetTable of tablesToTry) {
@@ -72,6 +91,10 @@ export async function readFromSupabase(tableName: string, options?: ReadOptions)
           query = query.eq("fecha", options.date);
         } else if (options?.dateFrom && options?.dateTo) {
           query = query.gte("fecha", options.dateFrom).lte("fecha", options.dateTo);
+        }
+
+        if (options?.productionIds && options.productionIds.length > 0) {
+          query = query.in("produccion_id", options.productionIds);
         }
         
         const { data, error } = await query.range(start, start + limit - 1);
@@ -146,7 +169,7 @@ export async function writeToSupabase(tableName: string, action: 'insert' | 'upd
     }
   }
 
-  let currentTable = table;
+  let currentTable = CANONICAL_SUPABASE_TABLES[table] || table;
   let attempt = 0;
   const maxAttempts = 25;
   let aliasIndex = 0;
@@ -337,9 +360,23 @@ export async function deleteFromSupabase(tableName: string, idKey: string, idVal
 
   const { sheetCol: dbIdCol } = getIdColumnAndKey(tableName);
   
-  const tablesToTry = [table, ...(TABLE_ALIASES[table] || [])];
-  if (table.endsWith("v2") && !tablesToTry.includes(table.slice(0, -2))) {
-    tablesToTry.push(table.slice(0, -2));
+  const canonical = CANONICAL_SUPABASE_TABLES[table];
+  const tablesToTry: string[] = [];
+  if (canonical) {
+    tablesToTry.push(canonical);
+    const aliases = TABLE_ALIASES[canonical] || [];
+    for (const a of aliases) {
+      if (!tablesToTry.includes(a)) tablesToTry.push(a);
+    }
+  } else {
+    tablesToTry.push(table);
+    const aliases = TABLE_ALIASES[table] || [];
+    for (const a of aliases) {
+      if (!tablesToTry.includes(a)) tablesToTry.push(a);
+    }
+    if (table.endsWith("v2") && !tablesToTry.includes(table.slice(0, -2))) {
+      tablesToTry.push(table.slice(0, -2));
+    }
   }
 
   // Cascade Deletes for PRODUCCIONV2

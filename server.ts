@@ -6,7 +6,7 @@ import express from "express";
 import path from "path";
 import app from "./src/server/app.js";
 
-const PORT = Number(process.env.PORT) || 5173;
+const PORT = Number(process.env.PORT) || 4005;
 
 async function startServer() {
   if (process.env.VERCEL) {

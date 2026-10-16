@@ -341,7 +341,7 @@ router.get("/api/produccion", async (req, res) => {
 
     await ProductionService.enrichProductionReportsWithNozzleNews(list);
     await ProductionService.enrichProductionReportsWithDetails(list);
-    await ProductionService.enrichProductionRecords(list);
+    await ProductionService.enrichProductionRecords(list, { date, dateFrom, dateTo });
     return res.json({ success: true, data: list });
   } catch (error: any) {
     console.error("GET /api/produccion Error:", error);
@@ -431,6 +431,7 @@ router.get("/api/sheets", async (req, res) => {
     if (upperTable === "PRODUCCIONV2") {
       await ProductionService.enrichProductionReportsWithNozzleNews(list);
       await ProductionService.enrichProductionReportsWithDetails(list);
+      await ProductionService.enrichProductionRecords(list, { date, dateFrom, dateTo });
     } else if (upperTable === "PAROSV2") {
       await ParosService.enrichParosOnRead(list);
     }

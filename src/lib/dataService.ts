@@ -90,12 +90,13 @@ export async function fetchTable(
   tableName: string,
   forceBypass = false,
   filters?: { date?: string; shiftId?: string; palletizerId?: string; dateFrom?: string; dateTo?: string },
-  source = "unspecified"
+  source = "unspecified",
+  forceServerBypass = false
 ): Promise<FetchResult> {
   let sheetName = tableName.toUpperCase();
   if (!sheetName.endsWith('V2')) sheetName = `${sheetName}V2`;
 
-  let requestKey = sheetName + (forceBypass ? "_bypass" : "");
+  let requestKey = sheetName + (forceBypass ? "_bypass" : "") + (forceServerBypass ? "_srv" : "");
   if (filters) {
     requestKey += JSON.stringify(filters);
   }
@@ -118,7 +119,7 @@ export async function fetchTable(
       }
 
       let queryParams = "";
-      if (forceBypass) queryParams += "bypassCache=true&";
+      if (forceServerBypass) queryParams += "bypassCache=true&";
       if (filters) {
         if (filters.date) queryParams += `date=${encodeURIComponent(filters.date)}&`;
         if (filters.shiftId) queryParams += `shiftId=${encodeURIComponent(filters.shiftId)}&`;

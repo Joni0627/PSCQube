@@ -91,19 +91,38 @@ function isStopForShift(stop: any, shiftId: string | null | undefined, dbShifts:
 }
 
 export class ProductionService {
-  static async enrichProductionRecords(data: any[]): Promise<void> {
+  static async enrichProductionRecords(data: any[], dateOptions?: { date?: string; dateFrom?: string; dateTo?: string }): Promise<void> {
     if (!data || data.length === 0) return;
     try {
+      // Determine targeted date filter for PAROSV2 so we do not download the entire historical table
+      let parosFilter: { date?: string; dateFrom?: string; dateTo?: string } | undefined = undefined;
+      if (dateOptions?.date) {
+        parosFilter = { date: dateOptions.date };
+      } else if (dateOptions?.dateFrom && dateOptions?.dateTo) {
+        parosFilter = { dateFrom: dateOptions.dateFrom, dateTo: dateOptions.dateTo };
+      } else {
+        const uniqueDates = Array.from(new Set(data.map(item => String(item.date || item.fecha || "").substring(0, 10)).filter(Boolean)));
+        if (uniqueDates.length === 1) {
+          parosFilter = { date: uniqueDates[0] };
+        } else if (uniqueDates.length > 1) {
+          uniqueDates.sort();
+          parosFilter = { dateFrom: uniqueDates[0], dateTo: uniqueDates[uniqueDates.length - 1] };
+        }
+      }
+
+      // Collect specific production IDs in this batch to only query details for these reports
+      const prodIds = data.map((item: any) => String(item.id || item.ID || "")).filter(Boolean);
+
       const [dbShifts, dbPalletizers, dbBaggers, dbMaterials, dbHacs, dbParos, dbCauses, dbCapacities, dbDetails, dbUsers] = await Promise.all([
         GenericRepository.findAll("TURNOSV2").catch(() => []),
         GenericRepository.findAll("PALETIZADORAV2").catch(() => []),
         GenericRepository.findAll("ENSACADORAV2").catch(() => []),
         GenericRepository.findAll("MATERIALESV2").catch(() => []),
         GenericRepository.findAll("HACSV2").catch(() => []),
-        GenericRepository.findAll("PAROSV2").catch(() => []),
+        GenericRepository.findAll("PAROSV2", parosFilter).catch(() => []),
         GenericRepository.findAll("CAUSASV2").catch(() => []),
         GenericRepository.findAll("CAPACIDADESV2").catch(() => []),
-        GenericRepository.findAll("DETALLES_PRODUCCIONV2").catch(() => []),
+        (prodIds.length > 0 ? GenericRepository.findAll("DETALLES_PRODUCCIONV2", { productionIds: prodIds }) : Promise.resolve([])).catch(() => []),
         GenericRepository.findAll("USUARIOSV2").catch(() => []),
       ]);
 
@@ -338,14 +357,10 @@ export class ProductionService {
     const supabase = getSupabaseClient();
     if (!supabase) return;
     try {
-      const list = await GenericRepository.findAll("PAROS_BOQUILLASV2");
       const cleanProdId = String(productionId || "").trim();
-      const matching = list.filter((n: any) => 
-        String(n.productionId || n.produccion_id || n.id_produccion || "").trim() === cleanProdId
-      );
-      for (let i = 0; i < matching.length; i++) {
-        await GenericRepository.delete("PAROS_BOQUILLASV2", matching[i].id);
-      }
+      if (!cleanProdId) return;
+      await supabase.from("paros_boquillasv2").delete().eq("produccion_id", cleanProdId);
+      invalidateCache("PAROS_BOQUILLASV2");
     } catch (err) {
       console.error("Error deleting old nozzles for productionId " + productionId + ":", err);
     }
@@ -378,14 +393,10 @@ export class ProductionService {
     const supabase = getSupabaseClient();
     if (!supabase) return;
     try {
-      const list = await GenericRepository.findAll("DETALLES_PRODUCCIONV2");
       const cleanProdId = String(productionId || "").trim();
-      const matching = list.filter((d: any) => 
-        String(d.productionId || d.produccion_id || d.id_produccion || "").trim() === cleanProdId
-      );
-      for (let i = 0; i < matching.length; i++) {
-        await GenericRepository.delete("DETALLES_PRODUCCIONV2", matching[i].id);
-      }
+      if (!cleanProdId) return;
+      await supabase.from("detalles_produccionv2").delete().eq("produccion_id", cleanProdId);
+      invalidateCache("DETALLES_PRODUCCIONV2");
     } catch (err) {
       console.error("Error deleting old details for productionId " + productionId + ":", err);
     }
@@ -432,8 +443,12 @@ export class ProductionService {
   }
 
   static async enrichProductionReportsWithNozzleNews(list: any[]): Promise<void> {
+    if (!list || list.length === 0) return;
     try {
-      const nozzleList = await GenericRepository.findAll("PAROS_BOQUILLASV2");
+      const prodIds = list.map((item: any) => String(item.id || item.ID || "")).filter(Boolean);
+      const nozzleList = prodIds.length > 0
+        ? await GenericRepository.findAll("PAROS_BOQUILLASV2", { productionIds: prodIds })
+        : [];
       const nozzleMap = new Map<string, any[]>();
 
       for (let i = 0; i < nozzleList.length; i++) {
@@ -459,8 +474,12 @@ export class ProductionService {
   }
 
   static async enrichProductionReportsWithDetails(list: any[]): Promise<void> {
+    if (!list || list.length === 0) return;
     try {
-      const detailsList = await GenericRepository.findAll("DETALLES_PRODUCCIONV2");
+      const prodIds = list.map((item: any) => String(item.id || item.ID || "")).filter(Boolean);
+      const detailsList = prodIds.length > 0
+        ? await GenericRepository.findAll("DETALLES_PRODUCCIONV2", { productionIds: prodIds })
+        : [];
       const detailsMap = new Map<string, any[]>();
 
       for (let i = 0; i < detailsList.length; i++) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GlassCard, GlassButton, GlassInput, GlassSelect } from '../../ui/GlassUI';
 import { FileText, Image as ImageIcon, File, Plus, Edit2, Trash2, Save, X, UploadCloud, Loader2, Check } from 'lucide-react';
 import { getSupabase } from '../../../lib/supabaseClient';
-import { AppUser } from '../../auth/types';
+import { AppUser } from '../../../types';
 import { cn } from '../../../lib/utils';
 
 interface Notification {

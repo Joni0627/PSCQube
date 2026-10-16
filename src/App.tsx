@@ -818,18 +818,18 @@ export default function App() {
         resPalletClassifications, resChange, resDespachos,
         resLoadingLanes, resFuelLoads, resUsers, resScaleParams
       ] = await Promise.all([
-        fetchTable("PAROSV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("PRODUCCIONV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("CONTROL_FECHADORV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("CONTROL_BALANZAV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("INVENTARIO_FISICOV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("CLASISFICACION_PALLETSV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("CAMBIO_PRODUCTOV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("DESPACHOSV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("ESTADO_CALLESV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("CARGA_COMBUSTIBLEV2", true, initialFilters, "App.handleSyncOnEnter"),
-        fetchTable("USUARIOSV2", true, {}, "App.handleSyncOnEnter"),
-        fetchTable("PARAMETROS_BALANZAV2", true, {}, "App.handleSyncOnEnter")
+        fetchTable("PAROSV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("PRODUCCIONV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("CONTROL_FECHADORV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("CONTROL_BALANZAV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("INVENTARIO_FISICOV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("CLASISFICACION_PALLETSV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("CAMBIO_PRODUCTOV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("DESPACHOSV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("ESTADO_CALLESV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("CARGA_COMBUSTIBLEV2", true, initialFilters, "App.handleSyncOnEnter", false),
+        fetchTable("USUARIOSV2", true, {}, "App.handleSyncOnEnter", false),
+        fetchTable("PARAMETROS_BALANZAV2", true, {}, "App.handleSyncOnEnter", false)
       ]);
 
       setSyncMessage('Preparando sistema...');
@@ -1006,7 +1006,7 @@ export default function App() {
     restoreSnapshots();
   }, [hasEnteredApp, userContext.selectedDate, userContext.selectedShiftId, prodTab, getCooldownKey, updateTableState, OPERATIONAL_TABLES_MAP]);
 
-  const fetchTableWithGuards = useCallback(async (tableName: string, bypassCache = false, source = "unspecified") => {
+  const fetchTableWithGuards = useCallback(async (tableName: string, bypassCache = false, source = "unspecified", forceServerBypass = false) => {
     const date = userContext.selectedDate;
     const shiftId = userContext.selectedShiftId;
     const key = getCooldownKey(tableName, date, shiftId);
@@ -1047,7 +1047,7 @@ export default function App() {
     const filters = { date, shiftId };
     const fetchPromise = (async () => {
       try {
-        const res = await fetchTable(tableName, bypassCache, filters, source);
+        const res = await fetchTable(tableName, bypassCache, filters, source, forceServerBypass);
         // Prevent race conditions: only update state if this is still the active fetch
         if (inFlightFetchesRef.current[key] === fetchPromise) {
           if (res.success && res.data) {
@@ -1155,8 +1155,8 @@ export default function App() {
     delete tableCooldownsRef.current[key];
     delete inFlightFetchesRef.current[key];
     
-    // Trigger guarded fetch with bypassCache = true
-    fetchTableWithGuards(tableName, true, `CRUD_${tableName}`);
+    // Trigger guarded fetch with bypassCache = true and forceServerBypass = true
+    fetchTableWithGuards(tableName, true, `CRUD_${tableName}`, true);
   }, [userContext.selectedDate, userContext.selectedShiftId, getCooldownKey, fetchTableWithGuards]);
 
   // --- Centralized, Synchronized & Toast-Enabled handlers ---
